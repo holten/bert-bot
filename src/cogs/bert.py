@@ -22,6 +22,20 @@ nor_model = BertForMaskedLM.from_pretrained("ltgoslo/norbert")
 nor_mask_id = nor_tokenizer("[MASK]", add_special_tokens=False).input_ids[0]
 nor_stopword_ids = stopwords.get_stopword_ids(nor_tokenizer, stopwords.norwegian, cased=True)
 nor_model.eval()
+
+nb_l_tokenizer = BertTokenizer.from_pretrained("NbAiLab/nb-bert-large")
+nb_l_tokenizer.unique_no_split_tokens.extend(nosplit_tokens)
+nb_l_model = BertForMaskedLM.from_pretrained("NbAiLab/nb-bert-large")
+nb_l_mask_id = nb_l_tokenizer("[MASK]", add_special_tokens=False).input_ids[0]
+nb_l_stopword_ids = stopwords.get_stopword_ids(nb_l_tokenizer, stopwords.norwegian, cased=True)
+nb_l_model.eval()
+
+nb_b_tokenizer = BertTokenizer.from_pretrained("NbAiLab/nb-bert-base")
+nb_b_tokenizer.unique_no_split_tokens.extend(nosplit_tokens)
+nb_b_model = BertForMaskedLM.from_pretrained("NbAiLab/nb-bert-base")
+nb_b_mask_id = nb_b_tokenizer("[MASK]", add_special_tokens=False).input_ids[0]
+nb_b_stopword_ids = stopwords.get_stopword_ids(nb_b_tokenizer, stopwords.norwegian, cased=True)
+nb_b_model.eval()
 # #
 
 
@@ -158,6 +172,88 @@ class Bert(commands.Cog):
 
         content = " ".join(content)
         result = insert(nor_tokenizer, nor_model, nor_mask_id, content, stopwords=nor_stopword_ids)
+
+        if not result or result == content:
+            return await no_mask_error(ctx)
+
+        await ctx.reply(result)
+
+    @commands.group(name="nblbert")
+    async def nblbert(self, ctx):
+        """
+        NB-Bert-Large commands
+        """
+
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @nblbert.command(name="mlm")
+    async def nblmlm(self, ctx, *content):
+        """
+        Get the top 5 suggested filler words for a given text.
+
+        `[content...]` - Text input. Bert will suggest words where `_` is found.
+        """
+
+        content = " ".join(content)
+        message = get_mlm_message(nb_l_tokenizer, nb_l_model, nb_l_mask_id, content, stopwords=nb_l_stopword_ids)
+
+        if not message:
+            return await no_mask_error(ctx)
+
+        await ctx.reply(message)
+
+    @nblbert.command(name="insert")
+    async def nblinsert(self, ctx, *content):
+        """
+        Make Bert fill in words marked with `_` in a given text.
+
+        `[content...]` - Text input. Bert will suggest words where `_` is found.
+        """
+
+        content = " ".join(content)
+        result = insert(nb_l_tokenizer, nb_l_model, nb_l_mask_id, content, stopwords=nb_l_stopword_ids)
+
+        if not result or result == content:
+            return await no_mask_error(ctx)
+
+        await ctx.reply(result)
+
+    @commands.group(name="nbbbert")
+    async def nbbbert(self, ctx):
+        """
+        NB-Bert-base commands
+        """
+
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
+
+    @nbbbert.command(name="mlm")
+    async def nbbmlm(self, ctx, *content):
+        """
+        Get the top 5 suggested filler words for a given text.
+
+        `[content...]` - Text input. Bert will suggest words where `_` is found.
+        """
+
+        content = " ".join(content)
+        message = get_mlm_message(nb_b_tokenizer, nb_b_model, nb_b_mask_id, content, stopwords=nb_b_stopword_ids)
+
+        if not message:
+            return await no_mask_error(ctx)
+
+        await ctx.reply(message)
+
+    @nbbbert.command(name="insert")
+    async def nbbinsert(self, ctx, *content):
+        """
+        Make Bert fill in words marked with `_` in a given text.
+
+        `[content...]` - Text input. Bert will suggest words where `_` is found.
+        """
+
+        content = " ".join(content)
+        result = insert(nb_b_tokenizer, nb_b_model, nb_b_mask_id, content, stopwords=nb_b_stopword_ids)
 
         if not result or result == content:
             return await no_mask_error(ctx)
